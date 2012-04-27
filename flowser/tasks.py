@@ -166,8 +166,17 @@ class Decision(object):
 
     @property
     def start_input(self):
-        started_event = self.most_recent('WorkflowExecutionStarted')
-        return serializing.loads(started_event.attrs['input'])
+        """Get start input as a python object.
+
+        This method iterates over the event history to find the
+        WorkflowExecutionStarted event and unserializes its input attribute.
+        The result is cached.
+        """
+        if not hasattr(self, '_start_input'):
+            started_event = self.most_recent('WorkflowExecutionStarted')
+            input_attr = started_event.attrs['input']
+            self._start_input = serializing.loads(input_attr)
+        return self._start_input
 
     def mark(self, name, details=None):
         """Adds a RecordMarker decision. """
