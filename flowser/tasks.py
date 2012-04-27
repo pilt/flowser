@@ -118,7 +118,7 @@ class Decision(object):
 
         self._decisions = []
         self._caller = caller
-        self._domain = caller.domain
+        self._domain = caller._domain
 
     def __repr__(self):
         return "<Decision workflow_type(%s) %s>" % (
@@ -244,7 +244,7 @@ class Activity(object):
                 result['workflowExecution'])
 
         self._caller = caller
-        self._domain = caller.domain
+        self._domain = caller._domain
 
     def __repr__(self):
         return "<Activity activity_type(%s) %s>" % (

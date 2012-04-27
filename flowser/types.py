@@ -34,23 +34,20 @@ class Type(object):
         for needed_prop in ['name', 'task_list', 'version']:
             if not hasattr(self, needed_prop):
                 raise Error(needed_prop)
-        self.domain = domain
+        self._domain = domain
+        self._conn = domain.conn
 
-    @property
-    def conn(self):
-        return self.domain.conn
-
-    def register(self, raise_exists=False):
+    def _register(self, raise_exists=False):
         assert self._reg_func_name is not None, "no reg func configured"
-        reg_func = getattr(self.conn, self._reg_func_name)
+        reg_func = getattr(self._conn, self._reg_func_name)
         try:
-            reg_func(self.domain.name, self.name, self.version)
+            reg_func(self._domain.name, self.name, self.version)
         except SWFTypeAlreadyExistsError:
             if raise_exists:
                 raise Error(self)
 
-    @classmethod
-    def get_id_from_input(cls, input):
+    @staticmethod
+    def get_id_from_input(input):
         """Get id from input.
 
         This class method is used to get unique workflow and activity ids.
@@ -61,7 +58,7 @@ class Type(object):
         :param input: Input used when starting and scheduling 
                                 workflows and tasks.
         """
-        raise NotImplementedError
+        raise NotImplementedError('implement in subclass')
 
     def _poll_for_activity_task(self, identity=None):
         """Low-level wrapper for boto's method with the same name. 
@@ -70,8 +67,8 @@ class Type(object):
 
         :raises: EmptyTaskPollResult
         """
-        result = self.conn.poll_for_activity_task(
-                self.domain.name, self.task_list, identity)
+        result = self._conn.poll_for_activity_task(
+                self._domain.name, self.task_list, identity)
         return _raise_if_empty_poll_result(result)
 
     def _poll_for_decision_task(self, identity=None, maximum_page_size=None, 
@@ -82,38 +79,10 @@ class Type(object):
 
         :raises: EmptyTaskPollResult
         """
-        result = self.conn.poll_for_decision_task( 
-                self.domain.name, self.task_list, identity, maximum_page_size, 
+        result = self._conn.poll_for_decision_task( 
+                self._domain.name, self.task_list, identity, maximum_page_size, 
                 next_page_token, reverse_order)
         return _raise_if_empty_poll_result(result)
-
-    @property
-    def activities(self):
-        """High-level interface to iterate over activity tasks.
-
-        This method polls for new tasks indefinitely.
-        """
-        while True:
-            try:
-                result = self._poll_for_activity_task()
-            except EmptyTaskPollResult:
-                continue
-            else:
-                yield tasks.Activity(result, self)
-
-    @property
-    def decisions(self):
-        """High-level interface to iterate over decision tasks.
-
-        This method polls for new tasks indefinitely.
-        """
-        while True:
-            try:
-                result = self._poll_for_decision_task(reverse_order=True)
-            except EmptyTaskPollResult:
-                continue
-            else:
-                yield tasks.Decision(result, self)
 
 
 class Activity(Type):
@@ -168,7 +137,7 @@ class Workflow(Type):
     def _get_static_start_kwargs(self):
         "Get start execeution arguments that never change. "
         return {
-                'domain': self.domain.name,
+                'domain': self._domain.name,
                 'workflow_name': self.name,
                 'workflow_version': self.version,
                 'execution_start_to_close_timeout': \
@@ -199,8 +168,8 @@ class Workflow(Type):
             latest_date = time.time()
         if oldest_date is None:
             oldest_date = latest_date - ONE_DAY
-        return self.conn.list_open_workflow_executions(
-                self.domain.name,
+        return self._conn.list_open_workflow_executions(
+                self._domain.name,
                 latest_date=latest_date,
                 oldest_date=oldest_date,
                 workflow_name=self.name,
@@ -211,14 +180,14 @@ class Workflow(Type):
             start_latest_date = time.time()
         if start_oldest_date is None:
             start_oldest_date = start_latest_date - ONE_DAY
-        return self.conn.list_closed_workflow_executions(
-                self.domain.name,
+        return self._conn.list_closed_workflow_executions(
+                self._domain.name,
                 start_latest_date=start_latest_date,
                 start_oldest_date=start_oldest_date,
                 workflow_name=self.name,
                 tag=self.default_filter_tag)
 
-    def start(self, input):
+    def _start(self, input):
         """Start workflow execution. 
 
         ``input`` is serialized and a workflow id is generated from it
@@ -228,7 +197,7 @@ class Workflow(Type):
         kwargs = self._get_static_start_kwargs()
         kwargs['workflow_id'] = self.get_id_from_input(input)
         kwargs['input'] = serializing.dumps(input)
-        return self.conn.start_workflow_execution(**kwargs)
+        return self._conn.start_workflow_execution(**kwargs)
 
     @classmethod
     def start_child(cls, input, control=None):

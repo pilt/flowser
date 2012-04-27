@@ -1,7 +1,8 @@
 from boto.swf.exceptions import SWFDomainAlreadyExistsError
 
+from flowser import tasks
 from flowser.exceptions import Error
-from flowser import types
+from flowser.exceptions import EmptyTaskPollResult
 
 
 class Domain(object):
@@ -10,30 +11,20 @@ class Domain(object):
     Subclasses must set a ``name`` property. They may also set a 
     ``retention_period`` property (defaults to '30').
 
-    Activity and workflow instances are available in two dict attributes on
-    domain instances: ``activity`` and ``workflow``. Keys are classes and values
-    are instances of activity and workflow types bound to the domain.
+    To register types, ``workflow_types`` and ``activity_types`` need to be
+    set. They should be lists of ``types.Workflow`` and ``types.Activity``
+    subclasses.
     """
 
     retention_period = '30'
+    workflow_types = None
+    activity_types = None
 
-    def __init__(self, conn, activities, workflows):
+    def __init__(self, conn):
         """
         :param conn: A ``boto.swf`` connection.
-        :param activities: List of activity types (subclasses of
-                           ``types.Activity``.
-        :param workflows: List of workflow types (subclasses of
-                           ``types.Workflow``.
         """
         self.conn = conn
-
-        # Bind activities and workflows to domain.
-        self.activity = {}
-        for act_class in activities:
-            self.activity[act_class] = act_class(self)
-        self.workflow = {}
-        for workflow_class in workflows:
-            self.workflow[workflow_class] = workflow_class(self)
 
     def register(self, raise_exists=False):
         "Register domain and associated types on AWS. " 
@@ -42,5 +33,46 @@ class Domain(object):
         except SWFDomainAlreadyExistsError:
             if raise_exists:
                 raise Error(self)
-        for t in self.activity.values() + self.workflow.values():
-            t.register(raise_exists=raise_exists)
+        types = (self.workflow_types or []) + (self.activity_types or [])
+        [t(self)._register(raise_exists=raise_exists) for t in types]
+
+    def start(self, t, input):
+        """Start execution.
+
+        Internally, this method creates an instance of ``t`` and calls its
+        ``start`` method with the given input.
+
+        :param t: Subclass of ``types.Type``.
+        """
+        return t(self)._start(input)
+
+    def decisions(self, t):
+        """High-level interface to iterate over decision tasks.
+
+        This method polls for new tasks of the given type indefinitely.
+
+        :param t: Subclass of ``types.Type``.
+        """
+        return self._poll_indefinitely(
+                t, '_poll_for_decision_task', tasks.Decision)
+
+    def activities(self, t):
+        """High-level interface to iterate over activity tasks.
+
+        This method polls for new tasks of the given type indefinitely.
+
+        :param t: Subclass of ``types.Type``.
+        """
+        return self._poll_indefinitely(
+                t, '_poll_for_activity_task', tasks.Activity)
+
+    def _poll_indefinitely(self, t, method_name, task_class):
+        instance = t(self)
+        poll_method = getattr(instance, method_name)
+        while True:
+            try:
+                result = poll_method()
+            except EmptyTaskPollResult:
+                continue
+            else:
+                yield task_class(result, instance)
