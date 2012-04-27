@@ -134,7 +134,7 @@ class Activity(Type):
     def schedule(cls, input, control=None):
         "Called from subclasses' ``schedule`` class method. "
         dec, attrs = decisions.skeleton("ScheduleActivityTask")
-        attrs['activityId'] = self.get_id_from_input(input)
+        attrs['activityId'] = cls.get_id_from_input(input)
         attrs['activityType'] = {
                 'name': cls.name,
                 'version': cls.version}
@@ -240,7 +240,7 @@ class Workflow(Type):
         """
         dec, attrs = decisions.skeleton("StartChildWorkflowExecution")
         attrs.update(cls._get_static_child_start_attrs())
-        attrs['workflowId'] = self.get_id_from_input(input)
+        attrs['workflowId'] = cls.get_id_from_input(input)
         attrs['input'] = serializing.dumps(input)
         if control is not None:
             attrs['control'] = serializing.dumps(control)
