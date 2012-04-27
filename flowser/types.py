@@ -22,7 +22,8 @@ def _raise_if_empty_poll_result(result):
 class Type(object):
     """Base class for Simple Workflow types (activities, workflows).
 
-    Subclasses must set ``name``, ``task_list`` and ``version`` properties.
+    Subclasses must set ``name``, ``version`` and ``task_list`` properties. They
+    must also implement ``get_id_from_input``.
     """
 
     # Override this in a subclass to the name (string) of a register method on
@@ -47,6 +48,20 @@ class Type(object):
         except SWFTypeAlreadyExistsError:
             if raise_exists:
                 raise Error(self)
+
+    @classmethod
+    def get_id_from_input(cls, input):
+        """Get id from input.
+
+        This class method is used to get unique workflow and activity ids.
+
+        A typical implementation may retrieve and id field from the input and
+        append it to the class's task list.
+
+        :param input: Input used when starting and scheduling 
+                                workflows and tasks.
+        """
+        raise NotImplementedError
 
     def _poll_for_activity_task(self, identity=None):
         """Low-level wrapper for boto's method with the same name. 
@@ -116,10 +131,10 @@ class Activity(Type):
     start_to_close_timeout = str(ONE_HOUR)
 
     @classmethod
-    def _schedule(cls, activity_id, input, control=None):
+    def schedule(cls, input, control=None):
         "Called from subclasses' ``schedule`` class method. "
         dec, attrs = decisions.skeleton("ScheduleActivityTask")
-        attrs['activityId'] = activity_id
+        attrs['activityId'] = self.get_id_from_input(input)
         attrs['activityType'] = {
                 'name': cls.name,
                 'version': cls.version}
@@ -131,12 +146,6 @@ class Activity(Type):
         attrs['startToCloseTimeout'] = cls.start_to_close_timeout
         if control is not None:
             attrs['control'] = serializing.dumps(control)
-        return dec
-
-    @classmethod
-    def _request_cancel(cls, activity_id):
-        dec, attrs = decisions.skeleton("RequestCancelActivityTask")
-        attrs['activityId'] = activity_id
         return dec
 
 
@@ -209,27 +218,31 @@ class Workflow(Type):
                 workflow_name=self.name,
                 tag=self.default_filter_tag)
 
-    def _start(self, workflow_id, execution_input=None):
-        """Start workflow execution. ``execution_info`` is serialized.
+    def start(self, input):
+        """Start workflow execution. 
 
-        A subclass should call this method from its ``start`` method.
+        ``input`` is serialized and a workflow id is generated from it
+        using ``get_id_from_input``.
+
         """
         kwargs = self._get_static_start_kwargs()
-        kwargs['workflow_id'] = workflow_id
-        kwargs['input'] = serializing.dumps(execution_input)
+        kwargs['workflow_id'] = self.get_id_from_input(input)
+        kwargs['input'] = serializing.dumps(input)
         return self.conn.start_workflow_execution(**kwargs)
 
     @classmethod
-    def _start_child(cls, workflow_id, input, control=None):
-        """Start child workflow.
+    def start_child(cls, input, control=None):
+        """Start child workflow execution. 
+        
+        ``input`` is serialized and a workflow id is generated from it
+        using ``get_id_from_input``.
 
-        A subclass should call this method from its ``start_child`` class 
-        method.
         """
         dec, attrs = decisions.skeleton("StartChildWorkflowExecution")
         attrs.update(cls._get_static_child_start_attrs())
-        attrs['workflowId'] = workflow_id
+        attrs['workflowId'] = self.get_id_from_input(input)
         attrs['input'] = serializing.dumps(input)
         if control is not None:
             attrs['control'] = serializing.dumps(control)
         return dec
+

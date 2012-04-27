@@ -1,0 +1,1 @@
+-e git://github.com/boto/boto.git@develop#egg=boto
