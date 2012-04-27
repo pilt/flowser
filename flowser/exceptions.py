@@ -4,3 +4,7 @@ class Error(Exception):
 
 class EmptyTaskPollResult(Error):
     pass
+
+
+class LastPage(Error):
+    pass

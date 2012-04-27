@@ -99,7 +99,7 @@ class Type(object):
             except EmptyTaskPollResult:
                 continue
             else:
-                yield tasks.Activity(result, domain=self.domain)
+                yield tasks.Activity(result, self)
 
     @property
     def decisions(self):
@@ -113,7 +113,7 @@ class Type(object):
             except EmptyTaskPollResult:
                 continue
             else:
-                yield tasks.Decision(result, domain=self.domain)
+                yield tasks.Decision(result, self)
 
 
 class Activity(Type):

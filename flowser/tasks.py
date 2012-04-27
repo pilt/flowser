@@ -2,6 +2,7 @@ from flowser import serializing
 from flowser import decisions
 from flowser.events import Event
 from flowser.exceptions import Error
+from flowser.exceptions import LastPage
 
 
 class WorkflowExecution(object):
@@ -22,14 +23,10 @@ class WorkflowExecution(object):
         return "<WorkflowExecution %s>" % self
 
     def request_cancel(self):
-        if self._domain is None:
-            raise Error("domain missing")
         self._domain.conn.request_cancel(self._domain.name, self.workflow_id, 
                                          run_id=self.run_id)
 
     def signal(self, name, input=None):
-        if self._domain is None:
-            raise Error("domain missing")
         serialized_input = None
         if input is not None:
             serialized_input = serializing.dumps(input)
@@ -56,8 +53,6 @@ class WorkflowExecution(object):
         self._terminate('REQUEST_CANCEL', details, reason)
 
     def _terminate(self, child_policy, details, reason):
-        if self._domain is None:
-            raise Error("domain missing")
         self._domain.conn.terminate_workflow_execution(
                 self._domain.name, self.workflow_id, 
                 child_policy=child_policy, details=details, reason=reason,
@@ -107,13 +102,13 @@ class Decision(object):
     first).
     """
 
-    def __init__(self, result, domain=None):
+    def __init__(self, result, caller):
         """
         :param result: Result structure from the API. 
-        :param domain: A domain instance (optional). Needed for responses.
+        :param caller: Caller object (subclass of ``types.Type``).
         """
-        self.events = [Event(r) for r in result['events']]
-        self.next_page_token = result.get('nextPageToken', None)
+        self._events = result['events']
+        self.next_page_token = self._get_next_page_token(result)
         self.previous_started_event_id = result['previousStartedEventId']
         self.started_event_id = result['startedEventId']
         self.task_token = result['taskToken']
@@ -122,14 +117,48 @@ class Decision(object):
         self.workflow_type = WorkflowType(result['workflowType'])
 
         self._decisions = []
-        self._domain = domain
+        self._caller = caller
+        self._domain = caller.domain
 
     def __repr__(self):
         return "<Decision workflow_type(%s) %s>" % (
                 self.workflow_type, self.workflow_execution)
 
+    def _get_next_page_token(self, result):
+        return result.get('nextPageToken', None)
+
+    @property
+    def events(self):
+        # First go through what we got. This list may have been extended
+        # from previous calls. After that, fetch new pages until no more are
+        # available.
+        for r in self._events:
+            yield Event(r)
+        try:
+            while True:
+                for r in self._next_page():
+                    yield Event(r)
+        except LastPage:
+            raise StopIteration
+
+    def _next_page(self):
+        """Get next page of history events.
+
+        This method updates ``self.next_page_token`` and extends 
+        ``self._events`` behind the curtains.
+
+        :raises: LastPage
+        """
+        if self.next_page_token is None:
+            raise LastPage
+        next_result = self._caller._poll_for_decision_task(
+                next_page_token=self.next_page_token,
+                reverse_order=True)
+        self.next_page_token = self._get_next_page_token(next_result)
+        self._events.extend(next_result['events'])
+        return next_result['events']
+
     def most_recent(self, event_type):
-        # FIXME sp: Handle pagination of events.
         for event in self.events:
             if event.type == event_type:
                 return event
@@ -174,8 +203,6 @@ class Decision(object):
         return self
 
     def complete(self, context=None):
-        if self._domain is None:
-            raise Error("domain missing")
         execution_context = None
         if context is not None:
             execution_context = serializing.dumps(context)
@@ -184,8 +211,6 @@ class Decision(object):
                 execution_context=execution_context)
 
     def fail(self, details=None, reason=None):
-        if self._domain is None:
-            raise Error("domain missing")
         self._domain.conn.respond_decision_task_failed(
                 self.task_token, details=details, reason=reason)
 
@@ -196,7 +221,7 @@ class Activity(object):
     See http://docs.amazonwebservices.com/amazonswf/latest/apireference/API_PollForActivityTask.html.
     """
 
-    def __init__(self, result, domain=None):
+    def __init__(self, result, caller):
         """
         :param result: Result structure from the API. 
         :param domain: A domain instance (optional). Needed for responses.
@@ -209,15 +234,14 @@ class Activity(object):
         self.workflow_execution = WorkflowExecution(
                 result['workflowExecution'])
 
-        self._domain = domain
+        self._caller = caller
+        self._domain = caller.domain
 
     def __repr__(self):
         return "<Activity activity_type(%s) %s>" % (
                 self.activity_type, self.workflow_execution)
 
     def complete(self, result=None):
-        if self._domain is None:
-            raise Error("domain missing")
         serialized_result = None
         if result is not None:
             serialized_result = serializing.dumps(result)
@@ -225,13 +249,9 @@ class Activity(object):
                 self.task_token, result=serialized_result)
 
     def fail(self, details=None, reason=None):
-        if self._domain is None:
-            raise Error("domain missing")
         self._domain.conn.respond_activity_task_failed(
                 self.task_token, details=details, reason=reason)
 
     def cancel(self, details=None):
-        if self._domain is None:
-            raise Error("domain missing")
         self._domain.conn.respond_activity_task_canceled(
                 self.task_token, details=details)
