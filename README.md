@@ -146,9 +146,9 @@ class SumWorker(WorkerThread):
 Implementation of worker threads for our workflow and activities.
 
 ```python
-MultiplyWorker(domain).start()
-SumWorker(domain).start()
-ArithmeticWorkflowDecider(domain).start()
+MultiplyWorker().start()
+SumWorker().start()
+ArithmeticWorkflowDecider().start()
 
 import uuid
 arithmetic_input = {
