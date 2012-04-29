@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name="flowser",
-      version="0.0.1",
+      version="0.0.2",
       description="High-level interface for Amazon Simple Workflow",
       author="Simon Pantzare",
       author_email="simon+flowser@pewpewlabs.com",
