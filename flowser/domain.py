@@ -53,8 +53,9 @@ class Domain(object):
 
         :param t: Subclass of ``types.Type``.
         """
+        poll_kwargs = {'reverse_order': True}
         return self._poll_indefinitely(
-                t, '_poll_for_decision_task', tasks.Decision)
+                t, '_poll_for_decision_task', tasks.Decision, poll_kwargs)
 
     def activities(self, t):
         """High-level interface to iterate over activity tasks.
@@ -66,12 +67,15 @@ class Domain(object):
         return self._poll_indefinitely(
                 t, '_poll_for_activity_task', tasks.Activity)
 
-    def _poll_indefinitely(self, t, method_name, task_class):
+    def _poll_indefinitely(self, t, method_name, task_class, poll_kwargs=None):
         instance = t(self)
         poll_method = getattr(instance, method_name)
+        kwargs = {}
+        if poll_kwargs is not None:
+            kwargs.update(poll_kwargs)
         while True:
             try:
-                result = poll_method()
+                result = poll_method(**kwargs)
             except EmptyTaskPollResult:
                 continue
             else:

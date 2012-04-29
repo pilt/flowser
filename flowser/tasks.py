@@ -1,7 +1,6 @@
 from flowser import serializing
 from flowser import decisions
 from flowser.events import Event
-from flowser.exceptions import Error
 from flowser.exceptions import LastPage
 
 
@@ -11,16 +10,27 @@ class WorkflowExecution(object):
     See http://docs.amazonwebservices.com/amazonswf/latest/apireference/API_WorkflowExecution.html.
     """
 
-    def __init__(self, result, domain=None):
+    def __init__(self, result, caller):
         self.run_id = result['runId']
         self.workflow_id = result['workflowId']
-        self._domain = domain
+        self._caller = caller
+        self._domain = caller._domain
 
     def __str__(self):
         return "run_id(%s) workflow_id(%s)" % (self.run_id, self.workflow_id)
 
     def __repr__(self):
         return "<WorkflowExecution %s>" % self
+
+    def complete(self, result, context=None):
+        """Complete workflow execution.
+
+        This can only be called from a decision task.
+        """
+        dec, attrs = decisions.skeleton("CompleteWorkflowExecution")
+        attrs['result'] = serializing.dumps(result)
+        self._caller._decisions.append(dec)
+        self._caller.complete(context=context)
 
     def request_cancel(self):
         self._domain.conn.request_cancel(self._domain.name, self.workflow_id, 
@@ -107,18 +117,19 @@ class Decision(object):
         :param result: Result structure from the API. 
         :param caller: Caller object (subclass of ``types.Type``).
         """
+        self._decisions = []
+        self._caller = caller
+        self._domain = caller._domain
+
         self._events = result['events']
         self.next_page_token = self._get_next_page_token(result)
         self.previous_started_event_id = result['previousStartedEventId']
         self.started_event_id = result['startedEventId']
         self.task_token = result['taskToken']
         self.workflow_execution = WorkflowExecution(
-                result['workflowExecution'])
+                result['workflowExecution'], self)
         self.workflow_type = WorkflowType(result['workflowType'])
 
-        self._decisions = []
-        self._caller = caller
-        self._domain = caller._domain
 
     def __repr__(self):
         return "<Decision workflow_type(%s) %s>" % (
@@ -162,7 +173,10 @@ class Decision(object):
         for event in self.events:
             if event.type == event_type:
                 return event
-        raise Error('%s event not found' % event_type)
+        return None
+
+    def filter(self, event_type):
+        return filter(lambda ev: ev.type == event_type, self.events)
 
     @property
     def start_input(self):
@@ -235,16 +249,16 @@ class Activity(object):
         :param result: Result structure from the API. 
         :param domain: A domain instance (optional). Needed for responses.
         """
+        self._caller = caller
+        self._domain = caller._domain
+
         self.activity_id = result['activityId']
         self.activity_type = ActivityType(result['activityType'])
         self.input = serializing.loads(result['input'])
         self.started_event_id = result['startedEventId']
         self.task_token = result['taskToken']
         self.workflow_execution = WorkflowExecution(
-                result['workflowExecution'])
-
-        self._caller = caller
-        self._domain = caller._domain
+                result['workflowExecution'], self)
 
     def __repr__(self):
         return "<Activity activity_type(%s) %s>" % (

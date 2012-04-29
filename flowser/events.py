@@ -4,6 +4,7 @@ The purpose is to make it easier to work with the API.
 
 See http://docs.amazonwebservices.com/amazonswf/latest/apireference/API_HistoryEvent.html.
 """
+from flowser import serializing
 
 _event_types = [
         "WorkflowExecutionStarted",
@@ -60,6 +61,9 @@ def _attr_key_name(s):
 _attr_keys = map(_attr_key_name, _event_types)
 _attr_key_lookup = dict(zip(_event_types, _attr_keys))
 
+_auto_unserialize_attrs = {
+        "ActivityTaskCompleted": ['result'],
+        }
 
 def attrs(result):
     """Get event attributes.
@@ -69,7 +73,14 @@ def attrs(result):
     """
     event_type = result['eventType']
     attributes_key = _attr_key_lookup[event_type]
-    return result[attributes_key]
+    ev_attrs = result[attributes_key]
+    for key in _auto_unserialize_attrs.get(event_type, []):
+        value = ev_attrs[key]
+        try:
+            ev_attrs[key] = serializing.loads(value)
+        except TypeError:
+            pass
+    return ev_attrs
 
 
 class Event(object):

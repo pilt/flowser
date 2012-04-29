@@ -3,7 +3,6 @@ import time
 from boto.swf.exceptions import SWFTypeAlreadyExistsError
 
 from flowser import serializing
-from flowser import tasks
 from flowser.exceptions import Error
 from flowser.exceptions import EmptyTaskPollResult
 from flowser import decisions
