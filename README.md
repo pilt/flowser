@@ -96,12 +96,14 @@ class ArithmeticWorkflowDecider(threading.Thread):
         for task in domain.decisions(ArithmeticWorkflow):
             is_new = len(task.filter('DecisionTaskScheduled')) == 1
             if is_new:
+                # Schedule tasks from "operations" input. 
                 for op_id, op, input in task.start_input['operations']:
                     activity = op_to_activity[op]
                     task.schedule(activity, {
                         'id': task.start_input['id'], 
                         'operation': [op_id, input],
                         })
+                task.complete()
             else:
                 op_ids = set([x[0] for x in task.start_input['operations']])
                 results = {}
@@ -112,9 +114,10 @@ class ArithmeticWorkflowDecider(threading.Thread):
 
                 got_all = op_ids == result_ids
                 if got_all:
+                    # Got results for all operations. Complete workflow.
                     task.workflow_execution.complete(results)
-
-            task.complete()
+                else:
+                    task.complete()
 
 
 class WorkerThread(threading.Thread):
