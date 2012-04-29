@@ -1,3 +1,8 @@
+# Flowser
+
+![](https://github.com/pilt/flowser/raw/master/gfx/flowser.png)
+
+*Amazon Simple Workflow made easy.*
 
 ## Requirements
 
