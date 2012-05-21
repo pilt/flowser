@@ -1,7 +1,7 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(name="flowser",
-      version="0.0.2",
+      version="0.1.0",
       description="High-level interface for Amazon Simple Workflow",
       author="Simon Pantzare",
       author_email="simon+flowser@pewpewlabs.com",
@@ -15,9 +15,9 @@ setup(name="flowser",
           "Intended Audience :: Developers",
           "License :: OSI Approved :: MIT License",
           "Operating System :: OS Independent",
-          "Topic :: Internet",
           "Programming Language :: Python :: 2",
           "Programming Language :: Python :: 2.7",
           ],
-      requires=['boto (>=2.3.0)'],
-      )
+      install_requires=[
+          'boto>=2.4.1',
+          ])
