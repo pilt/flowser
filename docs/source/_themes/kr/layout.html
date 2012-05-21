@@ -10,7 +10,19 @@
 {% endblock %}
 {%- block relbar2 %}{% endblock %}
 {%- block footer %}
-    <div class="footer">
-      &copy; Copyright {{ copyright }}.
-    </div>
+<div class="footer">
+    &copy; Copyright {{ copyright }}.
+</div>
 {%- endblock %}
+
+{% block sidebarlogo %}
+  {{ super() }}
+  <div style="margin-top:15px;margin-bottom:2px">
+  <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&repo=flowser&type=watch&count=true" 
+      allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+  </div>
+  <div style="margin-bottom:15px">
+  <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&type=follow&count=true" 
+      allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+  </div>
+{% endblock %}
