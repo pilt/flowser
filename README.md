@@ -8,9 +8,6 @@ A high-level interface for [Amazon Simple Workflow][swf] on top of [Boto][boto].
 
     $ pip install -r requirements.txt
 
-This module does not work with Boto 2.3.0 because of bugs in the SWF module. We
-use the development branch where there are fixes.
-
 
 ## Usage
 
