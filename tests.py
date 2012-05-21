@@ -26,6 +26,7 @@ if_environment = unittest.skipIf(not TEST_DOMAIN, 'FLOWSER_TEST_DOMAIN unset')
 def get_id_from_input(cls, input):
     return ".".join([cls.name, input['id']])
 
+
 def auto_configured(cls):
     """Class decorator for test types. """
     cls.version = '1.0.0'
@@ -39,9 +40,11 @@ class ArithmeticWorkflow(flowser.types.Workflow):
     """Workflow for performing arithmetics. """
     name = 'ArithmeticWorkflow'
 
+
 @auto_configured
 class MultiplyActivity(flowser.types.Activity):
     name = 'MultiplyActivity'
+
 
 @auto_configured
 class SumActivity(flowser.types.Activity):
