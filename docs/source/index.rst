@@ -3,22 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Flowser's documentation!
-===================================
+Flowser
+=======
 
-Contents:
+Flowser is a high-level interface for `Amazon Simple Workflow`_ on top of
+`Boto`_.
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
+   examples/arithmetic
    ref/api
 
 
 
-Indices and tables
-==================
+Indices and Tables
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
+.. _Amazon Simple Workflow: http://aws.amazon.com/swf/
+.. _Boto: http://boto.readthedocs.org/en/latest/index.html
