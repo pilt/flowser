@@ -18,11 +18,15 @@
 {% block sidebarlogo %}
   {{ super() }}
   <div style="margin-top:15px;margin-bottom:2px">
-  <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&repo=flowser&type=watch&count=true" 
-      allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+      <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&repo=flowser&type=watch&count=true" 
+          allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+  </div>
+  <div style="margin-bottom:2px">
+      <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&type=follow&count=true" 
+          allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
   </div>
   <div style="margin-bottom:15px">
-  <iframe src="http://markdotto.github.com/github-buttons/github-btn.html?user=pilt&type=follow&count=true" 
-      allowtransparency="true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+      <a href="https://twitter.com/simonpantzare" class="twitter-follow-button" data-show-count="false">Follow @simonpantzare</a>
+      <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
   </div>
 {% endblock %}
