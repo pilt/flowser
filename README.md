@@ -16,3 +16,7 @@ A high-level interface for [Amazon Simple Workflow][swf] on top of [Boto][boto].
 [swf]: http://aws.amazon.com/swf/
 [boto]: http://boto.readthedocs.org/en/latest/index.html
 [docs]: http://readthedocs.org/docs/flowser/en/latest/
+
+## Looking for maintainer
+
+Do you want to maintain this project? Open an issue!
